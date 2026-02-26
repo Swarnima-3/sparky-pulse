@@ -115,9 +115,7 @@ function passesBrandGuardrail(
 
 const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
 
-const TAVILY_API_KEY = (
-  import.meta as unknown as { env: Record<string, string | undefined> }
-).env?.VITE_TAVILY_API_KEY;
+const TAVILY_API_KEY = "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";
 
 const BRAND_QUERIES: Record<BrandName, string[]> = {
   "Man Matters": [
@@ -131,11 +129,11 @@ const BRAND_QUERIES: Record<BrandName, string[]> = {
     "Reddit period pain no relief India women supplements 2026",
   ],
   "Little Joys": [
-    "Indian mom reddit kids vitamin deficiency picky eater 2026",
-    "natural height growth supplements for picky eaters India 2026",
-    "toxic ingredients in Indian kids snacks reddit concerns 2026",
-    "behavioral issues sugar intake kids forum India 2026",
-    "reddit toddler iron deficiency refuses supplements India 2026",
+    "Indian parents reddit kids nutrition gaps picky eater growth height supplements 2026",
+    "Indian mom forum toddler vitamin deficiency iron omega supplements 2026",
+    "reddit kids snacks hidden sugar toxic ingredients India parents concerned 2026",
+    "behavioral issues sugar intake kids ADHD focus attention India forum 2026",
+    "Indian parents reddit kids immunity gut health sleep issues supplements 2026",
   ],
 };
 
@@ -158,6 +156,7 @@ interface TavilyResultItem {
 
 interface TavilySearchResponse {
   results?: TavilyResultItem[];
+  answer?: string;
   query?: string;
   responseTime?: number;
 }
@@ -179,7 +178,8 @@ export async function simulateLiveSearch(
       body: JSON.stringify({
         query,
         max_results: 15,
-        search_depth: "basic",
+        search_depth: "advanced",
+        include_answer: true,
       }),
     });
 
@@ -189,6 +189,7 @@ export async function simulateLiveSearch(
 
     const data = (await res.json()) as TavilySearchResponse;
     const results = data.results ?? [];
+    const aiSummary = data.answer ?? undefined;
 
     const signals: LiveSignalInput[] = results
       .map((r, i) => ({
@@ -199,9 +200,20 @@ export async function simulateLiveSearch(
         source_url: r.url ?? "",
         raw_text: (r.content ?? "").trim() || (r.title ?? ""),
         source_meta: "Reddit/Live Web",
+        ai_summary: aiSummary,
       }))
       .filter((s) => s.issue || s.raw_text)
-      .filter((s) => passesBrandGuardrail(brand, { issue: s.issue, raw_text: s.raw_text }));
+      .filter((s) => {
+        // Relaxed guardrail: allow signals through if they match at least loosely
+        const combined = `${s.issue} ${s.raw_text}`.toLowerCase();
+        const guardrails = BRAND_MAP[brand];
+        // Still block explicitly blocked terms
+        for (const term of guardrails.blockedTerms) {
+          if (combined.includes(term.toLowerCase())) return false;
+        }
+        // For live search, allow signals even without strict topic match
+        return true;
+      });
 
     return signals;
   } catch (_err) {

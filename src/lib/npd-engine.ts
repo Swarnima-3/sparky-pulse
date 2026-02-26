@@ -82,6 +82,7 @@ export interface LiveSignalInput {
   source_url: string;
   raw_text: string;
   source_meta?: string;
+  ai_summary?: string;
 }
 
 export interface LivePulseResult {
