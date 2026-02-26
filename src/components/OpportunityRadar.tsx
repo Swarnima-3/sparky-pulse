@@ -14,18 +14,21 @@ const brandColorMap: Record<BrandName, { dot: string; glow: string }> = {
 };
 
 export function OpportunityRadar({ briefs, brand }: OpportunityRadarProps) {
+  // Stable jitter per brief using index-based seed
   const data = useMemo(() => {
-    return briefs.map((b) => ({
+    const seededRandom = (i: number) => ((i * 2654435761) % 1000) / 1000; // deterministic jitter
+    return briefs.map((b, i) => ({
       name: b.dynamicName,
-      x: b.signalStrength,
-      y: b.evidence.competitionDensity === "High" ? 3 : b.evidence.competitionDensity === "Medium" ? 2 : 1,
+      x: Math.max(1, Math.min(10, b.signalStrength + (seededRandom(i) * 0.5 - 0.25))),
+      y: (b.evidence.competitionDensity === "High" ? 3 : b.evidence.competitionDensity === "Medium" ? 2 : 1) + (seededRandom(i + 100) * 0.5 - 0.25),
       score: b.opportunityScore,
       isBlueOcean: b.opportunityType === "Blue Ocean",
       brief: b,
     }));
   }, [briefs]);
 
-  const maxX = Math.max(...data.map((d) => d.x), 10);
+  // Auto-scale axes to fit all products in 1-10 range
+  const maxX = 10;
   const colors = brandColorMap[brand];
 
   return (
@@ -86,9 +89,9 @@ export function OpportunityRadar({ briefs, brand }: OpportunityRadarProps) {
 
         {/* Data points */}
         {data.map((d, i) => {
-          const xPct = Math.min((d.x / maxX) * 90 + 5, 95);
-          const yPct = 100 - ((d.y / 3.5) * 90 + 5);
-          const size = Math.max(16, Math.min(d.score * 5, 44));
+          const xPct = Math.min(Math.max((d.x / maxX) * 85 + 7.5, 5), 95);
+          const yPct = 100 - (Math.min(Math.max((d.y / 3.5) * 85 + 7.5, 5), 95));
+          const size = Math.max(20, Math.min(d.score * 5, 44));
 
           return (
             <motion.div
@@ -104,12 +107,12 @@ export function OpportunityRadar({ briefs, brand }: OpportunityRadarProps) {
               }}
             >
               <div
-                className={`rounded-full flex items-center justify-center text-[8px] font-bold text-white cursor-default transition-all duration-200 hover:scale-125 ${
+                className={`rounded-full flex items-center justify-center text-[8px] font-bold text-white cursor-default transition-all duration-200 hover:scale-125 hover:opacity-100 ${
                   d.isBlueOcean
                     ? "bg-emerald-500 shadow-[0_0_14px_rgba(52,211,153,0.6)]"
                     : `${colors.dot} ${colors.glow}`
                 }`}
-                style={{ width: size, height: size }}
+                style={{ width: size, height: size, opacity: 0.6 }}
               >
                 {d.score.toFixed(0)}
               </div>
