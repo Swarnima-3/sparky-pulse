@@ -24,7 +24,7 @@ export interface BrandLogic {
 export const COMPETITION_PROXIES: Record<string, Record<string, number>> = {
   "Man Matters": { Hair: 0.9, Performance: 0.6, Beard: 0.7 },
   "Be Bodywise": { Skin: 0.8, PCOS: 0.4, "Body Care": 0.6 },
-  "Little Joys": { "Kids Nutrition": 0.5, "Moms Health": 0.3 },
+  "Little Joys": { "Kids Nutrition": 0.5, "Moms Health": 0.3, "Kids Gut": 0.4, "Kids Eye Health": 0.3 },
 };
 
 export interface EvidencePanel {
@@ -293,6 +293,33 @@ export const BRAND_LOGIC: Record<BrandName, BrandLogic> = {
         format: "Chewable",
         subSector: "Kids Nutrition",
       },
+      "Iron Deficiency": {
+        keywords: ["iron", "anemia", "pale", "fatigue", "hemoglobin", "low iron"],
+        concept: "Iron Bisglycinate Choco Melts",
+        actives: ["Iron Bisglycinate", "Vitamin C", "Folate"],
+        persona: "Parents of toddlers (1–5 yrs) flagged for low iron/hemoglobin.",
+        positioning: "Non-constipating iron form in chocolate melt; 3x better absorption than ferrous sulfate.",
+        format: "Oral Melt",
+        subSector: "Kids Nutrition",
+      },
+      "Omega-3 DHA Gap": {
+        keywords: ["omega", "dha", "fish oil", "brain", "fishy", "epa"],
+        concept: "Algae DHA Strawberry Gummies",
+        actives: ["Algal DHA", "EPA", "Vitamin E"],
+        persona: "Parents seeking plant-based omega-3 without fishy aftertaste for kids 2–8.",
+        positioning: "Algae-sourced DHA; no fish burps, vegetarian-friendly, kid-approved strawberry flavor.",
+        format: "Gummy",
+        subSector: "Kids Nutrition",
+      },
+      "Gut Health Kids": {
+        keywords: ["constipation", "tummy", "stomach", "digestion", "probiotic", "gut"],
+        concept: "Prebiotic Fiber + Probiotic Drops",
+        actives: ["Lactobacillus Rhamnosus", "FOS Prebiotic", "Zinc"],
+        persona: "Parents of children with recurring constipation or weak digestion.",
+        positioning: "Tasteless drops format for easy mixing; clinically studied strain for pediatric gut health.",
+        format: "Drops",
+        subSector: "Kids Nutrition",
+      },
     },
     exploratoryPains: {
       "Screen Time Eye Strain": {
@@ -311,6 +338,33 @@ export const BRAND_LOGIC: Record<BrandName, BrandLogic> = {
         persona: "Parents of school-age children seeking academic performance support.",
         positioning: "Ayurvedic-meets-modern nootropic; avoids stimulants found in adult formulas.",
         format: "Syrup",
+        subSector: "Kids Nutrition",
+      },
+      "Sleep Issues Kids": {
+        keywords: ["sleep", "insomnia", "restless", "night waking", "melatonin"],
+        concept: "Chamomile + Magnesium Sleep Melts",
+        actives: ["Chamomile Extract", "Magnesium Glycinate", "L-Theanine"],
+        persona: "Parents of kids 4–10 struggling with bedtime routines and restless sleep.",
+        positioning: "Gentle, non-melatonin herbal melt; safe for daily pediatric use.",
+        format: "Oral Melt",
+        subSector: "Kids Nutrition",
+      },
+      "Skin Rash Toddlers": {
+        keywords: ["rash", "eczema", "dry skin", "diaper rash", "sensitive skin"],
+        concept: "Calendula + Colloidal Oat Baby Balm",
+        actives: ["Calendula", "Colloidal Oatmeal", "Ceramides"],
+        persona: "Parents of infants/toddlers with eczema-prone or sensitive skin.",
+        positioning: "Steroid-free, pediatric-dermatologist-formulated; fragrance-free barrier repair.",
+        format: "Balm",
+        subSector: "Kids Nutrition",
+      },
+      "Vitamin D Deficiency": {
+        keywords: ["vitamin d", "sunlight", "indoor", "rickets", "bone weak"],
+        concept: "Vitamin D3 + K2 Sunshine Drops",
+        actives: ["Cholecalciferol", "Vitamin K2-MK7", "MCT Oil"],
+        persona: "Parents of indoor-heavy kids in metros with limited sun exposure.",
+        positioning: "Precise dropper dosing; oil-based for superior fat-soluble vitamin absorption.",
+        format: "Drops",
         subSector: "Kids Nutrition",
       },
     },
@@ -626,7 +680,7 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
       format,
       mrpRange: logic.mrpRange,
       isExploratory: !detail || isExploratory,
-      isLowSignal: sig.pain_intensity < 6 || sig.frequency_count < 15,
+      isLowSignal: sig.pain_intensity < 5 && sig.frequency_count < 10,
       isDecisionReady: opportunityScore >= 7.5,
       opportunityType,
       evidence: {
