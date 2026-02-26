@@ -6,6 +6,7 @@
 import type { BrandName, LiveSignalInput } from "./npd-engine";
 
 export const FRICTION_KEYWORDS = [
+  // General consumer friction
   "nothing works",
   "too expensive",
   "hard water",
@@ -29,6 +30,32 @@ export const FRICTION_KEYWORDS = [
   "post workout",
   "hair fall",
   "dandruff",
+  // Parenting-specific friction & guilt signals
+  "pediatrician warned",
+  "doctor said",
+  "tantrum after eating",
+  "school lunch came back",
+  "hidden sugar",
+  "growth chart plateau",
+  "won't touch milk",
+  "sensory issues",
+  "texture aversion",
+  "picky eater",
+  "refuses to eat",
+  "not gaining weight",
+  "below average height",
+  "nutritional gap",
+  "sugar crash",
+  "hyperactive after",
+  "can't sit still",
+  "attention span",
+  "won't swallow pills",
+  "spits out medicine",
+  "came back uneaten",
+  "lunch box rejected",
+  "worried about growth",
+  "compared to other kids",
+  "percentile dropped",
 ] as const;
 
 export type LiveSignalSource = "reddit" | "google_trends" | "competitor_gap";
@@ -60,7 +87,7 @@ const BRAND_MAP: Record<BrandName, BrandGuardrails> = {
     blockedTerms: ["beard", "minoxidil", "kids", "baby", "toddler", "infant", "height growth"],
   },
   "Little Joys": {
-    allowedTopics: ["kids", "children", "baby", "toddler", "infant", "nutrition", "growth", "mom", "mother", "parent", "supplement", "height"],
+    allowedTopics: ["kids", "children", "baby", "toddler", "infant", "nutrition", "growth", "mom", "mother", "parent", "supplement", "height", "teen", "adolescent", "snack", "lunch box", "tiffin", "sensory", "texture", "sugar", "attention", "focus", "adhd", "travel", "picky", "iron", "vitamin", "omega", "gut", "sleep", "eye", "screen"],
     blockedTerms: ["hair fall", "hair loss", "beard", "dandruff", "ed ", "erectile", "pcos", "minoxidil", "scalp", "acne"],
   },
 };
@@ -92,11 +119,32 @@ const TAVILY_API_KEY = (
   import.meta as unknown as { env: Record<string, string | undefined> }
 ).env?.VITE_TAVILY_API_KEY;
 
-const BRAND_QUERIES: Record<BrandName, string> = {
-  "Man Matters": "Reddit Man Matters hair fall beard growth consumer complaints 2026",
-  "Be Bodywise": "Reddit Be Bodywise PCOS hair skin friction points 2026",
-  "Little Joys": "Reddit Little Joys kids nutrition height growth mom concerns 2026",
+const BRAND_QUERIES: Record<BrandName, string[]> = {
+  "Man Matters": [
+    "Reddit Man Matters hair fall beard growth consumer complaints 2026",
+    "Reddit hard water hair loss India men frustrated 2026",
+    "Reddit patchy beard minoxidil not working India 2026",
+  ],
+  "Be Bodywise": [
+    "Reddit Be Bodywise PCOS hair skin friction points 2026",
+    "Reddit hormonal acne Indian women frustrated skincare 2026",
+    "Reddit period pain no relief India women supplements 2026",
+  ],
+  "Little Joys": [
+    "Indian mom reddit kids vitamin deficiency picky eater 2026",
+    "natural height growth supplements for picky eaters India 2026",
+    "toxic ingredients in Indian kids snacks reddit concerns 2026",
+    "behavioral issues sugar intake kids forum India 2026",
+    "reddit toddler iron deficiency refuses supplements India 2026",
+  ],
 };
+
+/** Rotate through brand queries to get diverse results */
+function getRotatedQuery(brand: BrandName): string {
+  const queries = BRAND_QUERIES[brand];
+  const index = Math.floor(Date.now() / 60000) % queries.length; // rotate every minute
+  return queries[index];
+}
 
 function generateId(): string {
   return `lp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -121,7 +169,7 @@ export async function simulateLiveSearch(
     if (!TAVILY_API_KEY) {
       return getSimulatedSignalsAsInput(brand);
     }
-    const query = BRAND_QUERIES[brand];
+    const query = getRotatedQuery(brand);
     const res = await fetch(TAVILY_SEARCH_URL, {
       method: "POST",
       headers: {

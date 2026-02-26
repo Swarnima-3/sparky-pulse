@@ -24,7 +24,7 @@ export interface BrandLogic {
 export const COMPETITION_PROXIES: Record<string, Record<string, number>> = {
   "Man Matters": { Hair: 0.9, Performance: 0.6, Beard: 0.7 },
   "Be Bodywise": { Skin: 0.8, PCOS: 0.4, "Body Care": 0.6 },
-  "Little Joys": { "Kids Nutrition": 0.5, "Moms Health": 0.3, "Kids Gut": 0.4, "Kids Eye Health": 0.3 },
+  "Little Joys": { "Kids Nutrition": 0.5, "Moms Health": 0.3, "Kids Gut": 0.4, "Kids Eye Health": 0.3, "Teen Nutrition": 0.2, "Neuro-Focus": 0.25, "Travel Snacks": 0.15 },
 };
 
 export interface EvidencePanel {
@@ -244,7 +244,7 @@ export const BRAND_LOGIC: Record<BrandName, BrandLogic> = {
     },
   },
   "Little Joys": {
-    categories: ["Kids Nutrition", "Moms Health"],
+    categories: ["Kids Nutrition", "Moms Health", "Teen Nutrition", "Neuro-Focus", "Travel Snacks"],
     mrpRange: "₹499 – ₹999",
     defaultFormat: "Nutri-Melt",
     pains: {
@@ -329,7 +329,7 @@ export const BRAND_LOGIC: Record<BrandName, BrandLogic> = {
         persona: "Parents worried about digital device impact on their child's vision.",
         positioning: "First kids-specific eye health gummy in India; addresses screen-time epidemic.",
         format: "Gummy",
-        subSector: "Kids Nutrition",
+        subSector: "Kids Eye Health",
       },
       "Cognitive Focus": {
         keywords: ["focus", "concentrate", "study", "memory", "brain"],
@@ -338,7 +338,7 @@ export const BRAND_LOGIC: Record<BrandName, BrandLogic> = {
         persona: "Parents of school-age children seeking academic performance support.",
         positioning: "Ayurvedic-meets-modern nootropic; avoids stimulants found in adult formulas.",
         format: "Syrup",
-        subSector: "Kids Nutrition",
+        subSector: "Neuro-Focus",
       },
       "Sleep Issues Kids": {
         keywords: ["sleep", "insomnia", "restless", "night waking", "melatonin"],
@@ -365,6 +365,51 @@ export const BRAND_LOGIC: Record<BrandName, BrandLogic> = {
         persona: "Parents of indoor-heavy kids in metros with limited sun exposure.",
         positioning: "Precise dropper dosing; oil-based for superior fat-soluble vitamin absorption.",
         format: "Drops",
+        subSector: "Kids Nutrition",
+      },
+      "Teen Protein Gap": {
+        keywords: ["teen", "teenager", "adolescent", "puberty", "protein", "sports"],
+        concept: "Clean Protein + Calcium Teen Shake",
+        actives: ["Pea Protein", "Calcium Citrate", "Vitamin D3", "Iron Bisglycinate"],
+        persona: "Parents of teens 12–15 in growth spurts who refuse adult protein powders.",
+        positioning: "First India-specific teen shake; clean label, no artificial sweeteners, school-bag portable.",
+        format: "Shake Sachet",
+        subSector: "Teen Nutrition",
+      },
+      "ADHD & Attention Support": {
+        keywords: ["adhd", "attention", "hyperactive", "can't sit still", "concentration", "distracted"],
+        concept: "Omega-3 + Magnesium Neuro-Focus Strips",
+        actives: ["Algal DHA", "Magnesium L-Threonate", "L-Theanine", "Zinc"],
+        persona: "Parents seeking non-pharmaceutical support for kids with attention challenges.",
+        positioning: "Oral dissolving strip format for kids who won't swallow pills; evidence-backed neuro-nutrients.",
+        format: "Oral Dissolving Strip",
+        subSector: "Neuro-Focus",
+      },
+      "Travel-Friendly Healthy Snacks": {
+        keywords: ["travel", "snack", "road trip", "flight", "on the go", "lunch box", "tiffin"],
+        concept: "Fortified Millet Bites — Travel Pack",
+        actives: ["Ragi", "Amaranth", "Flaxseed", "Vitamin B Complex"],
+        persona: "Parents needing mess-free, nutritious snacks for travel, school, and outings.",
+        positioning: "Shelf-stable fortified snack in single-serve packs; replaces junk food on-the-go.",
+        format: "Bite-Sized Bar",
+        subSector: "Travel Snacks",
+      },
+      "Texture Aversion & Sensory Feeding": {
+        keywords: ["sensory", "texture", "won't eat", "refuses food", "aversion", "spits out"],
+        concept: "Smooth Nutrient Squeeze Pouch",
+        actives: ["Multi-Vitamin", "Iron Bisglycinate", "Prebiotic Fiber"],
+        persona: "Parents of kids 2–6 with sensory processing challenges around food textures.",
+        positioning: "Ultra-smooth squeeze pouch format; bypasses texture triggers while delivering full nutrition.",
+        format: "Squeeze Pouch",
+        subSector: "Kids Nutrition",
+      },
+      "Hidden Sugar Anxiety": {
+        keywords: ["hidden sugar", "sugar free", "sugar crash", "hyperactive after", "artificial sweetener"],
+        concept: "Monk Fruit Sweetened Multi-Vitamin Melts",
+        actives: ["Monk Fruit Extract", "Multi-Vitamin Complex", "Zinc"],
+        persona: "Sugar-conscious parents who've lost trust in 'healthy' kids products with hidden sugars.",
+        positioning: "Transparent zero-sugar label; monk fruit sweetened for taste without glycemic spike.",
+        format: "Oral Dissolving Strip",
         subSector: "Kids Nutrition",
       },
     },
@@ -518,6 +563,16 @@ const PAIN_PREFIX_MAP: Record<string, string> = {
   "blue light": "Blue-Block", "tablet": "Screen-Time",
   "focus": "Focus-Fuel", "concentrate": "Concentrate-Pro", "study": "Study-Boost",
   "memory": "Memory-Max", "brain": "Brain-Boost",
+  "teen": "Teen-Power", "teenager": "Teen-Fuel", "adolescent": "Adolescent-Boost",
+  "puberty": "Puberty-Support", "protein": "Protein-Plus", "sports": "Sports-Fuel",
+  "adhd": "Neuro-Focus", "attention": "Attention-Aid", "hyperactive": "Calm-Focus",
+  "distracted": "Focus-Fix", "concentration": "Concentrate-Max",
+  "travel": "Travel-Ready", "snack": "Snack-Smart", "lunch box": "Tiffin-Pack",
+  "tiffin": "Tiffin-Fuel", "on the go": "On-The-Go",
+  "sensory": "Sensory-Safe", "texture": "Smooth-Blend", "refuses food": "Feed-Easy",
+  "aversion": "Aversion-Free", "spits out": "Easy-Take",
+  "hidden sugar": "Clean-Sugar", "sugar free": "Zero-Sugar", "sugar crash": "No-Crash",
+  "artificial sweetener": "Clean-Sweet",
 };
 
 function buildDynamicName(topKeyword: string, brand: BrandName, format: string): string {
@@ -599,7 +654,7 @@ export function runAnalysis(brand: BrandName, rows: Record<string, string>[]): A
     const potential = Object.entries({...logic.pains, ...logic.exploratoryPains});
 
     for (const [label, detail] of potential) {
-      if (briefs.length >= 10) break;
+      if (briefs.length >= 18) break;
       if (used.has(label)) continue;
 
       briefs.push({
@@ -625,7 +680,7 @@ export function runAnalysis(brand: BrandName, rows: Record<string, string>[]): A
 
   return {
     brand,
-    briefs: briefs.slice(0, 10),
+    briefs: briefs.slice(0, 18),
     noData: briefs.length === 0,
     stats: {
       totalRows: rows.length,
@@ -633,6 +688,30 @@ export function runAnalysis(brand: BrandName, rows: Record<string, string>[]): A
       datasetsAnalyzed: 1,
     },
   };
+}
+
+// --- Alternative Format Intelligence ---
+
+/** When competition is High for a format (e.g. Gummies), suggest disruptive alternatives */
+const ALTERNATIVE_FORMATS: Record<string, string[]> = {
+  "Gummy": ["Squeeze Pouch", "Oral Dissolving Strip", "Fortified Jam", "Effervescent Milk-Drops"],
+  "Powder Mix": ["Fortified Jam", "Squeeze Pouch", "Chewable Bar", "Effervescent Milk-Drops"],
+  "Tablet": ["Oral Dissolving Strip", "Effervescent Tablet", "Squeeze Pouch"],
+  "Syrup": ["Oral Melt", "Squeeze Pouch", "Oral Dissolving Strip"],
+  "Chewable": ["Oral Dissolving Strip", "Squeeze Pouch", "Effervescent Milk-Drops"],
+};
+
+function getSmartFormat(
+  originalFormat: string,
+  competitionDensity: "High" | "Medium" | "Low",
+  usedFormats: Set<string>
+): { format: string; wasSwapped: boolean } {
+  if (competitionDensity !== "High") return { format: originalFormat, wasSwapped: false };
+  const alts = ALTERNATIVE_FORMATS[originalFormat];
+  if (!alts) return { format: originalFormat, wasSwapped: false };
+  const unused = alts.find(f => !usedFormats.has(f));
+  if (unused) return { format: unused, wasSwapped: true };
+  return { format: alts[0], wasSwapped: true };
 }
 
 // --- runLivePulseAnalysis ---
@@ -643,6 +722,7 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
   const briefs: ProductBrief[] = [];
   let blueOceanCount = 0;
   let optimizationCount = 0;
+  const usedFormats = new Set<string>();
 
   for (const sig of signals) {
     const whiteSpace = normalizeIssueToWhiteSpace(sig.issue, brand);
@@ -653,18 +733,32 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
 
     const subSector = detail?.subSector ?? "Skin";
     const proxy = getCompetitionProxy(brand, subSector);
+    const competitionDensity = getCompetitionDensity(proxy);
+    
+    // Smart format: if competition is High, suggest alternative format
+    const baseFormat = detail?.format ?? BRAND_FORMATS[brand];
+    const { format: smartFormat, wasSwapped } = getSmartFormat(baseFormat, competitionDensity, usedFormats);
+    usedFormats.add(smartFormat);
+
     const opportunityScore = calcBlueOceanScore(sig.frequency_count, sig.pain_intensity, proxy);
-    const opportunityType: "Optimization" | "Blue Ocean" = whiteSpace && skuSet.has(whiteSpace)
-      ? "Optimization"
-      : "Blue Ocean";
+    
+    // Blue Ocean: true if format-ingredient combo is novel (swapped format OR no existing SKU)
+    const isFormatNovel = wasSwapped;
+    const opportunityType: "Optimization" | "Blue Ocean" = 
+      (whiteSpace && skuSet.has(whiteSpace) && !isFormatNovel)
+        ? "Optimization"
+        : "Blue Ocean";
     if (opportunityType === "Blue Ocean") blueOceanCount++;
     else optimizationCount++;
 
     const conceptName = detail?.concept ?? sig.issue;
-    const format = detail?.format ?? BRAND_FORMATS[brand];
     const dynamicName = detail
-      ? buildDynamicName(sig.issue.split(/\s+/)[0] || sig.issue, brand, detail.format)
+      ? buildDynamicName(sig.issue.split(/\s+/)[0] || sig.issue, brand, smartFormat)
       : `Live: ${sig.issue}`;
+    
+    const formatNote = wasSwapped 
+      ? ` 🔄 Format pivoted from ${baseFormat} → ${smartFormat} (High competition in ${baseFormat}).`
+      : "";
 
     briefs.push({
       conceptName,
@@ -672,12 +766,12 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
       whiteSpace: whiteSpace ?? sig.issue,
       signalStrength: sig.frequency_count,
       opportunityScore,
-      noveltyRationale: detail?.positioning ?? "Live signal — validate with R&D.",
+      noveltyRationale: (detail?.positioning ?? "Live signal — validate with R&D.") + formatNote,
       ingredients: detail?.actives ?? [],
       citation: extractSnippet(sig.raw_text),
       persona: detail?.persona ?? "Consumer from live channels.",
       positioning: detail?.positioning ?? "Address friction from social/trends.",
-      format,
+      format: smartFormat,
       mrpRange: logic.mrpRange,
       isExploratory: !detail || isExploratory,
       isLowSignal: sig.pain_intensity < 5 && sig.frequency_count < 10,
@@ -686,7 +780,7 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
       evidence: {
         marketplaceHits: sig.frequency_count,
         redditBuzz: Math.floor(sig.frequency_count * 0.3),
-        competitionDensity: getCompetitionDensity(proxy),
+        competitionDensity,
         formulaString: `(Friction × Sentiment ${(sig.pain_intensity / 10).toFixed(1)}) × 1.2 / ${proxy}`,
         evidenceSnippet: sig.raw_text,
         sourceUrl: sig.source_url,
