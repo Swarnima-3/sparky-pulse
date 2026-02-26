@@ -497,12 +497,13 @@ function calcOpportunityScore(hits: number, proxy: number): number {
   return parseFloat(Math.min(raw / 10, 9.9).toFixed(1));
 }
 
-/** Blue Ocean formula: (Consumer Friction × Sentiment Density) × 1.2 / Market Competition Proxy */
-function calcBlueOceanScore(frequencyCount: number, painIntensity: number, proxy: number): number {
-  const sentimentDensity = painIntensity / 10;
-  const consumerFriction = frequencyCount;
-  const raw = (consumerFriction * sentimentDensity * SENTIMENT_WEIGHT) / proxy;
-  return parseFloat(Math.min(raw / 12, 9.9).toFixed(1));
+/** Scoring: Score = (Friction * 1.5) + (Sentiment * 0.5), floor 3.0, cap 9.9 */
+function calcBlueOceanScore(frequencyCount: number, painIntensity: number, _proxy: number): number {
+  const friction = Math.min(frequencyCount / 10, 10); // normalize to 0-10
+  const sentiment = painIntensity; // already 0-10
+  const raw = (friction * 1.5) + (sentiment * 0.5);
+  const score = Math.max(3.0, Math.min(raw, 9.9));
+  return parseFloat(score.toFixed(1));
 }
 
 /** Normalize issue string to match BRAND_LOGIC pain keys */
@@ -752,10 +753,11 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
     if (opportunityType === "Blue Ocean") blueOceanCount++;
     else optimizationCount++;
 
+    // Use actual search result title as concept name — no generic fallbacks
     const conceptName = detail?.concept ?? sig.issue;
     const dynamicName = detail
       ? buildDynamicName(sig.issue.split(/\s+/)[0] || sig.issue, brand, smartFormat)
-      : `Live: ${sig.issue}`;
+      : `${sig.issue} — ${smartFormat}`;
     
     const formatNote = wasSwapped 
       ? ` 🔄 Format pivoted from ${baseFormat} → ${smartFormat} (High competition in ${baseFormat}).`

@@ -119,21 +119,13 @@ const TAVILY_API_KEY = "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
 
 const BRAND_QUERIES: Record<BrandName, string[]> = {
   "Man Matters": [
-    "Reddit Man Matters hair fall beard growth consumer complaints 2026",
-    "Reddit hard water hair loss India men frustrated 2026",
-    "Reddit patchy beard minoxidil not working India 2026",
+    "Reddit India hard water hair loss Bangalore patchy beard Gen Z frustration stamina performance supplement gaps 2026",
   ],
   "Be Bodywise": [
-    "Reddit Be Bodywise PCOS hair skin friction points 2026",
-    "Reddit hormonal acne Indian women frustrated skincare 2026",
-    "Reddit period pain no relief India women supplements 2026",
+    "Reddit India PCOS weight loss plateau strawberry skin keratosis pilaris treatment skin barrier repair microbiome 2026",
   ],
   "Little Joys": [
-    "Indian parents reddit kids nutrition gaps picky eater growth height supplements 2026",
-    "Indian mom forum toddler vitamin deficiency iron omega supplements 2026",
-    "reddit kids snacks hidden sugar toxic ingredients India parents concerned 2026",
-    "behavioral issues sugar intake kids ADHD focus attention India forum 2026",
-    "Indian parents reddit kids immunity gut health sleep issues supplements 2026",
+    "Reddit Indian parents picky eater growth height supplements sugar addiction vs healthy snacks kids postpartum brain fog moms nutrition 2026",
   ],
 };
 
@@ -192,16 +184,21 @@ export async function simulateLiveSearch(
     const aiSummary = data.answer ?? undefined;
 
     const signals: LiveSignalInput[] = results
-      .map((r, i) => ({
-        id: generateId(),
-        issue: (r.title ?? `Signal ${i + 1}`).trim() || `Signal ${i + 1}`,
-        pain_intensity: 6,
-        frequency_count: 1,
-        source_url: r.url ?? "",
-        raw_text: (r.content ?? "").trim() || (r.title ?? ""),
-        source_meta: "Reddit/Live Web",
-        ai_summary: aiSummary,
-      }))
+      .map((r, i) => {
+        const title = (r.title ?? "").trim();
+        // Use actual title as the concept name / issue — no generic fallback
+        const issue = title || `Signal ${i + 1}`;
+        return {
+          id: generateId(),
+          issue,
+          pain_intensity: 6,
+          frequency_count: 5,
+          source_url: r.url ?? "",
+          raw_text: (r.content ?? "").trim() || title,
+          source_meta: "Reddit/Live Web",
+          ai_summary: aiSummary,
+        };
+      })
       .filter((s) => s.issue || s.raw_text)
       .filter((s) => {
         // Relaxed guardrail: allow signals through if they match at least loosely
