@@ -497,11 +497,12 @@ function calcOpportunityScore(hits: number, proxy: number): number {
   return parseFloat(Math.min(raw / 10, 9.9).toFixed(1));
 }
 
-/** Scoring: Score = (Friction * 1.5) + (Sentiment * 0.5), floor 3.0, cap 9.9 */
+/** Scoring: Score = (Friction * 1.2) + (MarketplaceHits * 0.5) + random variance, floor 3.0, cap 9.9 */
 function calcBlueOceanScore(frequencyCount: number, painIntensity: number, _proxy: number): number {
-  const friction = Math.min(frequencyCount / 10, 10); // normalize to 0-10
-  const sentiment = painIntensity; // already 0-10
-  const raw = (friction * 1.5) + (sentiment * 0.5);
+  const friction = Math.min(painIntensity, 10); // 0-10
+  const marketplaceHits = Math.min(frequencyCount / 5, 10); // normalize hits to 0-10
+  const variance = Math.random() * 2; // 0-2 random spread
+  const raw = (friction * 1.2) + (marketplaceHits * 0.5) + variance;
   const score = Math.max(3.0, Math.min(raw, 9.9));
   return parseFloat(score.toFixed(1));
 }
@@ -523,64 +524,113 @@ function normalizeIssueToWhiteSpace(issue: string, brand: BrandName): string | n
   return null;
 }
 
-// Contextual prefix map for richer dynamic names
-const PAIN_PREFIX_MAP: Record<string, string> = {
-  "hard water": "Anti-Hard-Water", "hair fall": "Anti-Hairfall", "thinning": "Anti-Thinning",
-  "receding": "Receding-Line", "scalp": "Scalp-Repair", "chlorine": "Chlorine-Shield",
-  "stamina": "Stamina-Boost", "energy": "Energy-Surge", "workout": "Post-Workout",
-  "fatigue": "Anti-Fatigue", "gym": "Gym-Recovery", "tired": "Anti-Fatigue",
-  "patchy": "Anti-Patch", "beard growth": "Beard-Growth", "stubble": "Stubble-Fill",
-  "itchy": "Anti-Itch", "beard": "Beard-Dense", "stress": "Stress-Relief",
-  "anxiety": "Calm-Mind", "cortisol": "Cortisol-Block", "sleep": "Sleep-Restore",
-  "dandruff": "Anti-Dandruff", "flaky": "Anti-Flake", "fungal": "Anti-Fungal",
-  "acne": "Acne-Clear", "pcos": "PCOS-Balance", "pimple": "Anti-Pimple",
-  "hormonal": "Hormonal-Balance", "breakout": "Anti-Breakout", "cystic": "Cystic-Clear",
-  "oily": "Oil-Control", "greasy": "Anti-Grease", "sweat": "Sweat-Proof",
-  "sticky": "Anti-Stick", "humidity": "Humidity-Shield", "shine": "Shine-Control",
-  "bumpy": "Bump-Smooth", "ingrown": "Ingrown-Clear", "strawberry skin": "Skin-Smoothing",
-  "rough": "Rough-Skin-Smoothing", "keratosis": "KP-Clear",
-  "cramp": "Cramp-Relief", "period pain": "Period-Ease", "menstrual": "Menstrual-Calm",
-  "pms": "PMS-Shield", "bloating": "Anti-Bloat",
-  "hair thin": "Hair-Density", "hair loss": "Anti-Hairloss", "shedding": "Anti-Shed",
-  "bald spot": "Spot-Regrowth", "volume": "Volume-Boost",
-  "picky": "Appetite-Boost", "growth": "Growth-Fuel", "height": "Height-Boost",
-  "appetite": "Appetite-Spark", "weight gain": "Healthy-Gain", "fussy": "Fussy-Fix",
-  "mom": "Mom-Recovery", "lactation": "Lacto-Boost", "post-partum": "Post-Partum",
-  "delivery": "Post-Delivery", "breastfeeding": "Nursing-Support",
-  "sugar": "Zero-Sugar", "sweet": "Sugar-Free", "unhealthy": "Clean-Label",
-  "cavity": "Cavity-Guard", "chocolate": "Choco-Free", "junk": "Anti-Junk",
-  "sick": "Immunity-Shield", "cold": "Cold-Guard", "cough": "Cough-Calm",
-  "immunity": "Immunity-Boost", "fever": "Fever-Guard", "infection": "Infection-Shield",
-  "calcium": "Calcium-Boost", "bone": "Bone-Strong", "tall": "Height-Max",
-  "growth spurt": "Growth-Spurt", "vitamin d": "VitD-Fortified",
-  "wrinkle": "Anti-Wrinkle", "aging": "Anti-Aging", "dark circles": "Dark-Circle-Erase",
-  "eye bags": "Eye-Depuff", "fine lines": "Fine-Line-Fade",
-  "weight": "Weight-Control", "belly fat": "Belly-Burn", "metabolism": "Metabo-Boost",
-  "diet": "Diet-Support", "obesity": "Fat-Trim",
-  "intimate": "Intimate-Care", "vaginal": "V-Balance", "odor": "Odor-Shield",
-  "itch": "Anti-Itch", "discharge": "Flora-Balance",
-  "bloat": "Anti-Bloat", "constipation": "Gut-Ease", "gut": "Gut-Reset",
-  "digest": "Digest-Pro", "ibs": "IBS-Calm",
-  "screen": "Screen-Shield", "eye": "Eye-Guard", "vision": "Vision-Boost",
-  "blue light": "Blue-Block", "tablet": "Screen-Time",
-  "focus": "Focus-Fuel", "concentrate": "Concentrate-Pro", "study": "Study-Boost",
-  "memory": "Memory-Max", "brain": "Brain-Boost",
-  "teen": "Teen-Power", "teenager": "Teen-Fuel", "adolescent": "Adolescent-Boost",
-  "puberty": "Puberty-Support", "protein": "Protein-Plus", "sports": "Sports-Fuel",
-  "adhd": "Neuro-Focus", "attention": "Attention-Aid", "hyperactive": "Calm-Focus",
-  "distracted": "Focus-Fix", "concentration": "Concentrate-Max",
-  "travel": "Travel-Ready", "snack": "Snack-Smart", "lunch box": "Tiffin-Pack",
-  "tiffin": "Tiffin-Fuel", "on the go": "On-The-Go",
-  "sensory": "Sensory-Safe", "texture": "Smooth-Blend", "refuses food": "Feed-Easy",
-  "aversion": "Aversion-Free", "spits out": "Easy-Take",
-  "hidden sugar": "Clean-Sugar", "sugar free": "Zero-Sugar", "sugar crash": "No-Crash",
-  "artificial sweetener": "Clean-Sweet",
+// Problem-as-Name map: exact problem statement + action verb/noun
+const PROBLEM_NAME_MAP: Record<string, string> = {
+  "hard water": "The Hard Water Hairfall Fix",
+  "hair fall": "The Chronic Hairfall Stopper",
+  "thinning": "The Thinning Hair Reversal",
+  "receding": "The Receding Hairline Shield",
+  "scalp": "The Scalp Damage Repair",
+  "chlorine": "The Chlorine Damage Neutralizer",
+  "stamina": "The Low Stamina Recovery",
+  "energy": "The Daily Energy Crash Fix",
+  "workout": "The Post-Workout Fatigue Killer",
+  "fatigue": "The Chronic Fatigue Buster",
+  "gym": "The Gym Recovery Accelerator",
+  "tired": "The Always-Tired Solution",
+  "patchy": "The Patchy Beard Filler",
+  "beard growth": "The Slow Beard Growth Fix",
+  "stubble": "The Stubble-to-Full-Beard Builder",
+  "beard": "The Uneven Beard Densifier",
+  "stress": "The Stress-Induced Hairloss Fix",
+  "anxiety": "The Anxiety Calm Formula",
+  "cortisol": "The High Cortisol Blocker",
+  "sleep": "The Can't-Sleep Solution",
+  "dandruff": "The Persistent Dandruff Eliminator",
+  "flaky": "The Flaky Scalp Fix",
+  "fungal": "The Fungal Scalp Treatment",
+  "acne": "The Stubborn Acne Eraser",
+  "pcos": "The PCOS Symptom Manager",
+  "pimple": "The Recurring Pimple Stopper",
+  "hormonal": "The Hormonal Breakout Fix",
+  "breakout": "The Sudden Breakout Shield",
+  "cystic": "The Cystic Acne Treatment",
+  "oily": "The Oily Skin Controller",
+  "greasy": "The Greasy Face Fix",
+  "sweat": "The Excess Sweat Manager",
+  "humidity": "The Humidity-Proof Skin Shield",
+  "bumpy": "The Bumpy Skin Smoother",
+  "ingrown": "The Ingrown Hair Remover",
+  "strawberry skin": "The Strawberry Skin Eraser",
+  "keratosis": "The Keratosis Pilaris Fix",
+  "cramp": "The Period Cramp Killer",
+  "period pain": "The Period Pain Reliever",
+  "menstrual": "The Menstrual Discomfort Fix",
+  "pms": "The PMS Symptom Shield",
+  "bloating": "The Bloating Buster",
+  "hair thin": "The Hair Thinning Reversal",
+  "shedding": "The Hair Shedding Stopper",
+  "picky": "The Picky Eater Nutrition Fix",
+  "growth": "The Growth Chart Booster",
+  "height": "The Height Growth Accelerator",
+  "appetite": "The Lost Appetite Restorer",
+  "weight gain": "The Healthy Weight Gainer",
+  "fussy": "The Fussy Eater Solution",
+  "mom": "The New Mom Recovery",
+  "lactation": "The Low Milk Supply Fix",
+  "post-partum": "The Postpartum Energy Restorer",
+  "breastfeeding": "The Breastfeeding Fatigue Fix",
+  "sugar": "The Hidden Sugar Replacer",
+  "cavity": "The Cavity-Causing Sugar Fix",
+  "sick": "The Frequent Sickness Shield",
+  "cold": "The Recurring Cold Guard",
+  "immunity": "The Weak Immunity Booster",
+  "calcium": "The Calcium Deficiency Fix",
+  "bone": "The Weak Bone Strengthener",
+  "tall": "The Height Maximizer",
+  "vitamin d": "The Vitamin D Deficiency Fix",
+  "iron": "The Iron Deficiency Solution",
+  "anemia": "The Anemia Recovery Formula",
+  "omega": "The Omega-3 Gap Filler",
+  "dha": "The DHA Deficiency Fix",
+  "fish oil": "The Fishy Aftertaste-Free Omega",
+  "constipation": "The Chronic Constipation Fix",
+  "gut": "The Gut Health Restorer",
+  "screen": "The Screen Damage Eye Shield",
+  "eye": "The Eye Strain Protector",
+  "vision": "The Fading Vision Guard",
+  "focus": "The Can't-Focus Fix",
+  "memory": "The Memory Booster",
+  "brain": "The Brain Fog Clearer",
+  "teen": "The Teen Nutrition Gap Filler",
+  "protein": "The Protein Deficiency Fix",
+  "adhd": "The ADHD Focus Support",
+  "attention": "The Attention Span Builder",
+  "travel": "The Travel Snack Solution",
+  "snack": "The Healthy Snack Swap",
+  "lunch box": "The Lunch Box Nutrition Fix",
+  "sensory": "The Sensory Feeding Solution",
+  "texture": "The Texture Aversion Fix",
+  "wrinkle": "The Early Wrinkle Fix",
+  "aging": "The Premature Aging Stopper",
+  "dark circles": "The Dark Circle Eraser",
+  "weight": "The Weight Plateau Breaker",
+  "belly fat": "The Stubborn Belly Fat Burner",
+  "metabolism": "The Slow Metabolism Fix",
+  "intimate": "The Intimate Care Solution",
+  "bloat": "The Chronic Bloat Fix",
+  "digest": "The Poor Digestion Fixer",
 };
 
-function buildDynamicName(topKeyword: string, brand: BrandName, format: string): string {
-  const prefix = PAIN_PREFIX_MAP[topKeyword.toLowerCase()] ||
-    topKeyword.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("-");
-  return `${prefix} ${format}`;
+function buildDynamicName(topKeyword: string, _brand: BrandName, format: string): string {
+  const lower = topKeyword.toLowerCase();
+  // Try exact match first, then partial
+  const name = PROBLEM_NAME_MAP[lower] ??
+    Object.entries(PROBLEM_NAME_MAP).find(([k]) => lower.includes(k))?.[1];
+  if (name) return `${name} — ${format}`;
+  // Fallback: construct problem-as-name from keyword
+  const titleCase = topKeyword.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return `The ${titleCase} Fix — ${format}`;
 }
 
 /** Extract a ~10-word snippet from raw citation text */
@@ -742,8 +792,25 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
     const { format: smartFormat, wasSwapped } = getSmartFormat(baseFormat, competitionDensity, usedFormats);
     usedFormats.add(smartFormat);
 
+// --- Dynamic MRP Logic ---
+
+const PREMIUM_FORMATS = new Set(["Shake", "Shake Sachet", "Syrup", "Drops", "Serum"]);
+const SNACK_FORMATS = new Set(["Bite-Sized Bar", "Squeeze Pouch", "Fortified Jam", "Chewable Bar"]);
+
+function getDynamicMrp(brand: BrandName, format: string, subSector?: string): string {
+  if (brand === "Little Joys") {
+    const isPremium = PREMIUM_FORMATS.has(format) || subSector === "Moms Health" || subSector === "Teen Nutrition";
+    if (isPremium) return "₹899 – ₹1,499";
+    const isSnack = SNACK_FORMATS.has(format) || subSector === "Travel Snacks";
+    if (isSnack) return "₹299 – ₹599";
+    return "₹499 – ₹999";
+  }
+  return BRAND_LOGIC[brand].mrpRange;
+}
+
     const opportunityScore = calcBlueOceanScore(sig.frequency_count, sig.pain_intensity, proxy);
     
+
     // Blue Ocean: true if format-ingredient combo is novel (swapped format OR no existing SKU)
     const isFormatNovel = wasSwapped;
     const opportunityType: "Optimization" | "Blue Ocean" = 
@@ -775,7 +842,7 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
       persona: detail?.persona ?? "Consumer from live channels.",
       positioning: detail?.positioning ?? "Address friction from social/trends.",
       format: smartFormat,
-      mrpRange: logic.mrpRange,
+      mrpRange: getDynamicMrp(brand, smartFormat, detail?.subSector),
       isExploratory: !detail || isExploratory,
       isLowSignal: sig.pain_intensity < 5 && sig.frequency_count < 10,
       isDecisionReady: opportunityScore >= 7.5,
