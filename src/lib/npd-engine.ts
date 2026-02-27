@@ -820,12 +820,31 @@ function getDynamicMrp(brand: BrandName, format: string, subSector?: string): st
     if (opportunityType === "Blue Ocean") blueOceanCount++;
     else optimizationCount++;
 
-    // Use actual search result title as concept name — no generic fallbacks
+    // Naming: Use [Primary Ingredient] + [Format] when detail exists; 
+    // otherwise construct from the problem identified in the signal
     const conceptName = detail?.concept ?? sig.issue;
     const dynamicName = detail
-      ? buildDynamicName(sig.issue.split(/\s+/)[0] || sig.issue, brand, smartFormat)
-      : `${sig.issue} — ${smartFormat}`;
+      ? `${detail.actives[0] ?? "Active"} ${smartFormat}`
+      : buildDynamicName(sig.issue, brand, smartFormat);
     
+    // White Space: [Pain Point] + [Why current solutions fail]
+    const COMPETITOR_HASSLES: Record<string, string> = {
+      "Hard Water Hairfall": "Shower filters are too expensive & high-friction for renters",
+      "Performance Fatigue": "Gummy supplements are loaded with sugar",
+      "Patchy Beard": "Generic oils don't target specific patchy zones",
+      "Hormonal Acne": "Topicals strip skin barrier without addressing root cause",
+      "Strawberry Skin": "Thick body lotions feel sticky in Indian humidity",
+      "Picky Eating": "Existing powders taste chalky and kids refuse them",
+      "Post-partum Fatigue": "Iron tablets cause constipation; no all-in-one recovery format",
+      "Sugar Concerns": "Every kids supplement hides sugar under 'natural flavoring'",
+      "Period Pain": "OTC painkillers lose efficacy over time",
+      "PCOS Weight Plateau": "Generic diet supplements ignore insulin resistance",
+    };
+    const painLabel = whiteSpace ?? sig.issue;
+    const hassle = COMPETITOR_HASSLES[painLabel];
+    const refinedWhiteSpace = hassle
+      ? `${painLabel} (${hassle})`
+      : `${painLabel} — Gap in current market solutions`;
     const formatNote = wasSwapped 
       ? ` 🔄 Format pivoted from ${baseFormat} → ${smartFormat} (High competition in ${baseFormat}).`
       : "";
@@ -833,7 +852,7 @@ function getDynamicMrp(brand: BrandName, format: string, subSector?: string): st
     briefs.push({
       conceptName,
       dynamicName,
-      whiteSpace: whiteSpace ?? sig.issue,
+      whiteSpace: refinedWhiteSpace,
       signalStrength: sig.frequency_count,
       opportunityScore,
       noveltyRationale: (detail?.positioning ?? "Live signal — validate with R&D.") + formatNote,
