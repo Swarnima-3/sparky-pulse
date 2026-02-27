@@ -742,6 +742,67 @@ export function runAnalysis(brand: BrandName, rows: Record<string, string>[]): A
   };
 }
 
+// --- Format-Category DNA Alignment (The "Ragi Rule") ---
+
+/** Edible-only formats for Little Joys (Nutrition brand) */
+const EDIBLE_FORMATS = new Set([
+  "Powder Mix", "Milk Mix", "Nutri-Mix", "Gummy", "Gummies", "Bites", "Bite-Sized Bar",
+  "Chewable", "Oral Melt", "Oral Dissolving Strip", "Shake", "Shake Sachet",
+  "Syrup", "Drops", "Squeeze Pouch", "Fortified Jam", "Effervescent Milk-Drops",
+  "Sachet", "Nutri-Melt",
+]);
+
+/** Topical / wellness formats for Man Matters & Be Bodywise */
+const TOPICAL_WELLNESS_FORMATS = new Set([
+  "Tonic", "Serum", "Mist", "Gel", "Gummy", "Effervescent Tablet",
+  "Tablet", "Sublingual Drops", "Foam", "Sachet", "Oral Strip",
+  "Serum-Mist", "Balm",
+]);
+
+/** Force format to match brand sector DNA */
+function alignFormatToBrand(format: string, brand: BrandName): string {
+  if (brand === "Little Joys") {
+    if (EDIBLE_FORMATS.has(format)) return format;
+    // Map non-edible formats to edible equivalents
+    const EDIBLE_REMAP: Record<string, string> = {
+      "Mist": "Nutri-Mix", "Serum": "Syrup", "Spray": "Drops",
+      "Tonic": "Milk Mix", "Gel": "Gummy", "Foam": "Shake",
+      "Serum-Mist": "Nutri-Mix",
+    };
+    return EDIBLE_REMAP[format] ?? "Nutri-Mix";
+  }
+  // Man Matters / Be Bodywise — ensure topical/wellness
+  if (TOPICAL_WELLNESS_FORMATS.has(format)) return format;
+  return format; // allow broader formats for health/beauty brands
+}
+
+// --- Competitor & URL Sanitization (Anti-Hallucination Filter) ---
+
+const URL_PATTERN = /https?:\/\/\S+|www\.\S+|\w+\.(com|in|co|net|org|io)\b/gi;
+const COMPETITOR_NAMES = /trystrawberry|mamaearth|wow|beardo|ustraa|plixlife|oziva|healthkart|nykaa|amazon|flipkart/gi;
+const REDDIT_FILLER = /\b(any experiences with|reddit fix|has anyone tried|can someone recommend)\b/gi;
+
+function sanitizeProductName(rawName: string, detail: PainDetail | null, brand: BrandName, format: string): string {
+  let name = rawName;
+  // Strip URLs
+  name = name.replace(URL_PATTERN, "").trim();
+  // Strip competitor names
+  name = name.replace(COMPETITOR_NAMES, "").trim();
+  // Strip Reddit filler phrases
+  name = name.replace(REDDIT_FILLER, "").trim();
+  // Clean up leftover punctuation/whitespace
+  name = name.replace(/\s{2,}/g, " ").replace(/^[\s\-—·]+|[\s\-—·]+$/g, "").trim();
+
+  // If name is now too short, empty, or looks like noise — rebuild from detail
+  if (!name || name.length < 4 || /^(the|a|an|fix|solution)\s*$/i.test(name)) {
+    if (detail) {
+      return `${detail.actives[0]} ${format}`;
+    }
+    return `${format} Solution`;
+  }
+  return name;
+}
+
 // --- Alternative Format Intelligence ---
 
 /** When competition is High for a format (e.g. Gummies), suggest disruptive alternatives */
@@ -756,14 +817,20 @@ const ALTERNATIVE_FORMATS: Record<string, string[]> = {
 function getSmartFormat(
   originalFormat: string,
   competitionDensity: "High" | "Medium" | "Low",
-  usedFormats: Set<string>
+  usedFormats: Set<string>,
+  brand: BrandName
 ): { format: string; wasSwapped: boolean } {
-  if (competitionDensity !== "High") return { format: originalFormat, wasSwapped: false };
-  const alts = ALTERNATIVE_FORMATS[originalFormat];
-  if (!alts) return { format: originalFormat, wasSwapped: false };
-  const unused = alts.find(f => !usedFormats.has(f));
+  // First: align to brand DNA
+  let aligned = alignFormatToBrand(originalFormat, brand);
+
+  if (competitionDensity !== "High") return { format: aligned, wasSwapped: aligned !== originalFormat };
+  const alts = ALTERNATIVE_FORMATS[aligned];
+  if (!alts) return { format: aligned, wasSwapped: aligned !== originalFormat };
+  // Filter alternatives by brand DNA
+  const brandAlts = alts.filter(f => brand === "Little Joys" ? EDIBLE_FORMATS.has(f) : true);
+  const unused = brandAlts.find(f => !usedFormats.has(f));
   if (unused) return { format: unused, wasSwapped: true };
-  return { format: alts[0], wasSwapped: true };
+  return { format: brandAlts[0] ?? aligned, wasSwapped: true };
 }
 
 // --- Dynamic MRP Logic ---
@@ -786,9 +853,9 @@ function getDynamicMrp(brand: BrandName, format: string, subSector?: string): st
 
 const NOISE_SNIPPET_PATTERNS = /Reddit Rules|Privacy Policy|User Agreement|reReddit|Terms of Service|Cookie Notice|Accept All|Sign Up|Log In/i;
 
-function sanitizeSnippet(rawText: string, productName: string, whiteSpace: string): string {
+function sanitizeSnippet(rawText: string, productName: string, whiteSpace: string, format: string): string {
   if (!rawText || NOISE_SNIPPET_PATTERNS.test(rawText)) {
-    return `Consumers in high-intent communities are seeking ${productName} to solve ${whiteSpace} due to friction with current market alternatives.`;
+    return `High-intent consumer discussions around ${whiteSpace} indicate a clear preference for ${format} over existing market solutions.`;
   }
   return rawText;
 }
@@ -819,7 +886,8 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
     const competitionDensity = getCompetitionDensity(proxy);
 
     const baseFormat = detail?.format ?? BRAND_FORMATS[brand];
-    const { format: smartFormat, wasSwapped } = getSmartFormat(baseFormat, competitionDensity, usedFormats);
+    const alignedBase = alignFormatToBrand(baseFormat, brand);
+    const { format: smartFormat, wasSwapped } = getSmartFormat(alignedBase, competitionDensity, usedFormats, brand);
 
     const opportunityScore = calcBlueOceanScore(sig.frequency_count, sig.pain_intensity, proxy);
 
@@ -830,9 +898,10 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
         : "Blue Ocean";
 
     const conceptName = detail?.concept ?? sig.issue;
-    const dynamicName = detail
+    const rawDynName = detail
       ? `${detail.actives[0] ?? "Active"} ${smartFormat}`
       : buildDynamicName(sig.issue, brand, smartFormat);
+    const dynamicName = sanitizeProductName(rawDynName, detail ?? null, brand, smartFormat);
 
     const COMPETITOR_HASSLES: Record<string, string> = {
       "Hard Water Hairfall": "Shower filters are too expensive & high-friction for renters",
@@ -867,7 +936,7 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
       : "";
 
     // Sanitize snippet
-    const cleanSnippet = sanitizeSnippet(sig.raw_text, dynamicName, painLabel);
+    const cleanSnippet = sanitizeSnippet(sig.raw_text, dynamicName, painLabel, smartFormat);
 
     candidates.push({
       _whiteSpaceKey: painLabel, // dedup key is the normalized pain label
@@ -931,11 +1000,15 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
 
   // --- Phase 3: Strategic Format Diversity ---
   // If two briefs share the same format, force the second to change
-  const FALLBACK_FORMATS = ["Mist", "Gummy", "Serum", "Tonic", "Oral Melt", "Effervescent Tablet", "Drops", "Squeeze Pouch", "Oral Dissolving Strip", "Chewable", "Shake", "Powder Mix", "Gel", "Tablet", "Sachet", "Balm"];
+  // Brand-aware fallback formats
+  const FALLBACK_FORMATS_ALL = ["Gummy", "Oral Melt", "Drops", "Squeeze Pouch", "Oral Dissolving Strip", "Chewable", "Shake", "Powder Mix", "Nutri-Mix", "Milk Mix", "Bite-Sized Bar", "Syrup", "Sachet", "Mist", "Serum", "Tonic", "Effervescent Tablet", "Gel", "Tablet", "Foam", "Balm"];
+  const FALLBACK_FORMATS = FALLBACK_FORMATS_ALL.filter(f => brand === "Little Joys" ? EDIBLE_FORMATS.has(f) : true);
+
   const assignedFormats = new Set<string>();
   for (const brief of dedupedBriefs) {
+    // Ensure format matches brand DNA
+    brief.format = alignFormatToBrand(brief.format, brand);
     if (assignedFormats.has(brief.format)) {
-      // Find an unused format
       const alt = FALLBACK_FORMATS.find(f => !assignedFormats.has(f));
       if (alt) {
         brief.format = alt;
@@ -951,7 +1024,6 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
   const TARGET_MAX = 7;
 
   if (dedupedBriefs.length < TARGET_MIN) {
-    // Backfill from BRAND_LOGIC exploratory pains not already covered
     const usedKeys = new Set(candidates.map(c => c._whiteSpaceKey));
     const allPains = { ...logic.pains, ...logic.exploratoryPains };
 
@@ -959,21 +1031,23 @@ export function runLivePulseAnalysis(brand: BrandName, signals: LiveSignalInput[
       if (dedupedBriefs.length >= TARGET_MAX) break;
       if (usedKeys.has(label)) continue;
 
-      const fmt = FALLBACK_FORMATS.find(f => !assignedFormats.has(f)) ?? detail.format;
+      const rawFmt = detail.format;
+      const alignedFmt = alignFormatToBrand(rawFmt, brand);
+      const fmt = FALLBACK_FORMATS.find(f => !assignedFormats.has(f)) ?? alignedFmt;
       assignedFormats.add(fmt);
 
       const proxy = getCompetitionProxy(brand, detail.subSector);
-      const exploratoryScore = 4.0 + Math.random() * 3; // 4.0–7.0 range for backfills
+      const exploratoryScore = 4.0 + Math.random() * 3;
 
       dedupedBriefs.push({
         conceptName: detail.concept,
-        dynamicName: `${detail.actives[0]} ${fmt}`,
+        dynamicName: sanitizeProductName(`${detail.actives[0]} ${fmt}`, detail, brand, fmt),
         whiteSpace: `${label} — Exploratory gap based on category trends`,
         signalStrength: 0,
         opportunityScore: parseFloat(exploratoryScore.toFixed(1)),
         noveltyRationale: detail.positioning,
         ingredients: detail.actives,
-        citation: `Exploratory: Emerging trend identified in ${detail.subSector} category.`,
+        citation: `High-intent consumer discussions around ${label} indicate a clear preference for ${fmt} over existing market solutions.`,
         persona: detail.persona,
         positioning: detail.positioning,
         format: fmt,
