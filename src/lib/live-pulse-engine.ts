@@ -140,6 +140,26 @@ function generateId(): string {
   return `lp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Extract a 3-6 word problem description from raw text, stripping SEO fluff */
+function extractCoreProblem(text: string): string {
+  if (!text) return "";
+  // Try to find a friction phrase
+  const frictionPhrases = [
+    /(?:struggling with|frustrated by|can't find|nothing works for|need help with|looking for)\s+(.{10,60})/i,
+    /(?:my|our)\s+(.{5,40})\s+(?:is|are|won't|doesn't|isn't)/i,
+  ];
+  for (const re of frictionPhrases) {
+    const m = text.match(re);
+    if (m) {
+      const words = m[1].trim().split(/\s+/).slice(0, 6);
+      return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    }
+  }
+  // Fallback: first 5 meaningful words
+  const words = text.replace(/[^a-zA-Z\s]/g, "").trim().split(/\s+/).filter(w => w.length > 2).slice(0, 5);
+  return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+
 interface TavilyResultItem {
   title?: string;
   content?: string;
@@ -183,18 +203,26 @@ export async function simulateLiveSearch(
     const results = data.results ?? [];
     const aiSummary = data.answer ?? undefined;
 
+    // SEO noise filter — discard promotional/listicle titles
+    const SEO_NOISE_WORDS = ['Sale', 'Offers', 'Best', 'Top', 'vs', 'Review', '2026', 'Amazon', 'Flipkart', 'Buy Now', 'Discount', '% off'];
+    const isNoise = (title: string): boolean =>
+      SEO_NOISE_WORDS.some(word => title.toLowerCase().includes(word.toLowerCase()));
+
     const signals: LiveSignalInput[] = results
       .map((r, i) => {
         const title = (r.title ?? "").trim();
-        // Use actual title as the concept name / issue — no generic fallback
-        const issue = title || `Signal ${i + 1}`;
+        const rawText = (r.content ?? "").trim() || title;
+        // If title is SEO noise, extract the core problem from content instead
+        const issue = (!title || isNoise(title))
+          ? extractCoreProblem(rawText) || `Signal ${i + 1}`
+          : title;
         return {
           id: generateId(),
           issue,
           pain_intensity: 6,
           frequency_count: 5,
           source_url: r.url ?? "",
-          raw_text: (r.content ?? "").trim() || title,
+          raw_text: rawText,
           source_meta: "Reddit/Live Web",
           ai_summary: aiSummary,
         };
@@ -204,11 +232,9 @@ export async function simulateLiveSearch(
         // Relaxed guardrail: allow signals through if they match at least loosely
         const combined = `${s.issue} ${s.raw_text}`.toLowerCase();
         const guardrails = BRAND_MAP[brand];
-        // Still block explicitly blocked terms
         for (const term of guardrails.blockedTerms) {
           if (combined.includes(term.toLowerCase())) return false;
         }
-        // For live search, allow signals even without strict topic match
         return true;
       });
 

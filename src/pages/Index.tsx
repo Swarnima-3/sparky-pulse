@@ -79,7 +79,11 @@ const LANES: LaneMeta[] = [
 ];
 
 function classifyBrief(brief: ProductBrief): Swimlane {
-  if (brief.isDecisionReady || brief.opportunityScore > 7) return "high-signal";
+  // Guard against SEO noise/hallucinations — demote to V2
+  const isNoise = /Best|Top|Offers|Sale|Amazon|2026|Discount|Review/i.test(brief.dynamicName || brief.conceptName);
+  if (isNoise) return "portfolio-v2";
+
+  if (brief.isDecisionReady || brief.opportunityScore > 8.5) return "high-signal";
   if (
     (brief.evidence.competitionDensity === "Low" || brief.evidence.competitionDensity === "Medium") &&
     !brief.isExploratory
